@@ -1,0 +1,5 @@
+# always use the last thing
+package-lock.json
+
+node_modules/
+nbproject/

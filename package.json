@@ -1,0 +1,20 @@
+{
+  "name": "bluetooth-webapp",
+  "version": "1.0.0",
+  "description": "bluetooth testing",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "budo index.js:bundle.js --ssl --cors",
+    "build": "browserify main.js > bundle.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "browserify": "^16.2.3",
+    "budo": "^11.6.2"
+  },
+  "dependencies": {
+    "bluetooth-serial-port": "^2.2.3"
+  }
+}

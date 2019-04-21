@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Testing</title>
+        <meta name="viewport" content="width=device-width, minimum-scale=1.0">
+        <style>
+            #main {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+                font-family: sans-serif;
+            }
+            h1 {
+                font-size: 32px;
+            }
+            h2 {
+                font-size: 20px;
+                font-weight: normal;
+            }
+            #terminal div {
+                color: gray;
+            }
+            #terminal div.out {
+                color: red;
+            }
+            #terminal div.in {
+                color: blue;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Click anywhere to start...</h1>
+        <button id="button" type="button">Click Me!</button>
+        <button id="connect" type="button">Connect</button>
+
+        <button id="disconnect" type="button">Disconnect</button>
+
+        <div id="terminal">
+            <div>Device connection...</div>
+            <div class="out">Outcoming message</div>
+            <div class="in">Incoming message</div>
+        </div>
+
+        <form id="send-form">
+            <input id="input" type="text">
+            <button type="submit">Send</button>
+        </form>
+
+        <div id="main"></div>
+        <script src="bundle.js"></script>
+    </body>
+</html>
+
