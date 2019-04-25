@@ -20,6 +20,9 @@
                 font-size: 20px;
                 font-weight: normal;
             }
+            #connect_status div {
+                color: green;
+            }
             #terminal div {
                 color: gray;
             }
@@ -32,25 +35,53 @@
         </style>
     </head>
     <body>
-        <h1>Click anywhere to start...</h1>
-        <button id="button" type="button">Click Me!</button>
-        <button id="connect" type="button">Connect</button>
-
-        <button id="disconnect" type="button">Disconnect</button>
-
-        <div id="terminal">
-            <div>Device connection...</div>
-            <div class="out">Outcoming message</div>
-            <div class="in">Incoming message</div>
+        <div class="container">
+            <div class="page-header">
+                <h1>Start by connecting</h1>
+                <div class="row">
+                    <div class="col-md-1" ><button id="connect" type="button">Connect</button></div>
+                    <div class="col-md-2" id="connect_status">DISCONNECTED</div>
+                    <div class="col-md-8" id="acelerometer">DISCONNECTED</div>
+                    <div class="col-md-1" ><button id="disconnect" type="button">Disconnect</button></div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <button id="forward" type="button">Forward</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3 text-center"></div>
+                <div class="col-md-1 text-center">
+                    <button id="left" type="button">Left</button>
+                </div>
+                <div class="col-md-4 text-center">
+                    <button id="stop" type="button">Stop</button>
+                </div>
+                <div class="col-md-1 text-center">
+                    <button id="right" type="button">Right</button>
+                </div>
+                <div class="col-md-3 text-center"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <button id="back" type="button">Back</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 text-left">
+                    <div id="terminal">
+                        <div class="out">Outcoming message</div>
+                        <div class="in">Incoming message</div>
+                    </div>
+                    <form id="send-form">
+                        <input id="input" type="text">
+                        <button type="submit">Send</button>
+                    </form>
+                </div>
+            </div>
+            <script src="bundle.js"></script>
         </div>
-
-        <form id="send-form">
-            <input id="input" type="text">
-            <button type="submit">Send</button>
-        </form>
-
-        <div id="main"></div>
-        <script src="bundle.js"></script>
     </body>
 </html>
 

@@ -1,39 +1,51 @@
+window.jQuery = $ = require("jquery");
+require('popper.js/dist/umd/popper');
+require('bootstrap/dist/js/bootstrap');
+require('./node_modules/bootstrap/dist/css/bootstrap.css');
+
+
+
+let terminalContainer = document.getElementById('terminal');
+let sendForm = document.getElementById('send-form');
+let inputField = document.getElementById('input');
+let connectStatus = document.getElementById('connect_status');
+let acelerometer = document.getElementById('acelerometer');
+// Connect to the device on Connect button click
+document.getElementById('connect').addEventListener('click', connect);
+document.getElementById('disconnect').addEventListener('click', disconnect);
+sendForm.addEventListener('submit', function (event) {
+    event.preventDefault(); // Prevent form sending
+    send(inputField.value); // Send text field contents
+    inputField.value = ''; // Zero text field
+    inputField.focus(); // Focus on text field
+});
+
+function log(data, type = '') {
+    terminalContainer.insertAdjacentHTML('beforeend',
+            '<div' + (type ? ' class="' + type + '"' : '') + '>' + data + '</div>');
+}
+
 
 // Characteristic object cache
 let characteristicCache = null;
 // Selected device object cache
 let deviceCache = null;
 
-function handleDisconnection(event) {
+async function handleDisconnection(event) {
     let device = event.target;
     log('"' + device.name + '" bluetooth device disconnected, trying to reconnect...');
-    deviceCache = null;
-    connect();
+    connectStatus.innerHTML = "DISCONNECTED";
+    await disconnect();
+    await connect();
 }
 
-// Intermediate buffer for incoming data
-//let readBuffer = '';
 function handleCharacteristicValueChanged(event) {
+    // Limiter to 21 chars (DataView)
     let value = new TextDecoder().decode(event.target.value);
     log(value, 'in');
-    /*for (let c of value) {
-     if (c === '\n') {
-     let data = readBuffer.trim();
-     readBuffer = '';
-     if (data) {
-     log(data, 'in');
-     }
-     } else {
-     readBuffer += c;
-     }
-     }*/
 }
 
 
-function log(data, type = '') {
-    terminalContainer.insertAdjacentHTML('beforeend',
-            '<div' + (type ? ' class="' + type + '"' : '') + '>' + data + '</div>');
-}
 
 async function connect() {
     if (!deviceCache) {
@@ -51,13 +63,12 @@ async function connect() {
             log('> Id:               ' + device.id);
             log('> Connected:        ' + device.gatt.connected);
             log('"' + device.name + '" bluetooth device selected');
+
             deviceCache = device;
             deviceCache.addEventListener('gattserverdisconnected', handleDisconnection);
             log('Connecting to GATT server...');
             let server = await device.gatt.connect();
             log('> GATT server Connected:        ' + device.gatt.connected);
-
-
             let primary = await server.getPrimaryService(0xFFE0);
             console.log("PRIMARY", primary);
             log('got primary ' + primary);
@@ -65,85 +76,87 @@ async function connect() {
             log('got characteristic');
             characteristicCache = characteristic;
             log('Starting notifications...');
-            characteristic.startNotifications().then(() => {
-                log('Notifications started');
-                characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
-                characteristicCache = characteristic;
-            });
+            await characteristic.startNotifications();
+            log('Notifications started');
+            connectStatus.innerHTML = "CONNECTED";
+            characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
+            characteristicCache = characteristic;
             log("DONE");
         } catch (err) {
             console.error("ERROR", err);
             log("ERROR" + err);
+            disconnect();
         }
     }
 }
-async function send(data) {
+async function send(data, skiplog) {
     data = String(data);
     if (!data || !characteristicCache) {
         return;
     }
-    characteristicCache.writeValue(new TextEncoder().encode(data));
-    log(data, 'out');
+    await characteristicCache.writeValue(new TextEncoder().encode(data));
+    if (!skiplog) {
+        log(data, 'out');
+    }
 }
 
-function disconnect() {
-    if (deviceCache) {
-        log('Disconnecting from "' + deviceCache.name + '" bluetooth device...');
-        deviceCache.removeEventListener('gattserverdisconnected', handleDisconnection);
-        if (deviceCache.gatt.connected) {
-            deviceCache.gatt.disconnect();
-            log('"' + deviceCache.name + '" bluetooth device disconnected');
-        } else {
-            log('"' + deviceCache.name + '" bluetooth device is already disconnected');
-        }
-    }
+async function disconnect() {
     if (characteristicCache) {
         characteristicCache.removeEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
         characteristicCache = null;
     }
-    deviceCache = null;
+    if (deviceCache) {
+        log('Disconnecting from "' + deviceCache.name + '" bluetooth device...');
+        deviceCache.removeEventListener('gattserverdisconnected', handleDisconnection);
+        if (deviceCache.gatt.connected) {
+            await deviceCache.gatt.disconnect();
+            log('"' + deviceCache.name + '" bluetooth device disconnected');
+        } else {
+            log('"' + deviceCache.name + '" bluetooth device is already disconnected');
+        }
+        deviceCache = null;
+    }
 }
 
 
-
-
-// Get references to UI elements
-let connectButton = document.getElementById('connect');
-let disconnectButton = document.getElementById('disconnect');
-let terminalContainer = document.getElementById('terminal');
-let sendForm = document.getElementById('send-form');
-let inputField = document.getElementById('input');
-// Connect to the device on Connect button click
-connectButton.addEventListener('click', connect);
-disconnectButton.addEventListener('click', disconnect);
-sendForm.addEventListener('submit', function (event) {
-    event.preventDefault(); // Prevent form sending
-    send(inputField.value); // Send text field contents
-    inputField.value = ''; // Zero text field
-    inputField.focus(); // Focus on text field
+let actions = {
+    "forward": 'f',
+    "left": 'l',
+    "stop": 's',
+    "right": 'r',
+    "back": 'b'
+};
+Object.keys(actions).forEach(key => {
+    document.getElementById(key).addEventListener('click', () => {
+        send(actions[key], true);
+    });
 });
 
 
 
+let stopped = true;
+function handleOrientation(event) {
+    var x = event.beta;  // In degree in the range [-180,180]
+    var y = event.gamma; // In degree in the range [-90,90]
 
-
-
-
-
-const $button = document.getElementById("button");
-const $main = document.getElementById("main");
-$button.addEventListener("click", async () => {
-    try {
-        const h2 = document.createElement("h2");
-        h2.textContent = "data";
-        $main.innerHTML = "<h1>RET:</h1>";
-        $main.appendChild(h2);
-    } catch (e) {
-        const $err = document.createElement("code");
-        $err.style.color = "#f66";
-        $err.textContent = String(e.message || e);
-        $main.appendChild($err);
-        throw e;
+    acelerometer.innerHTML = "x : " + x + "  y: " + y;
+    if (x < -15) {
+        stopped = false;
+        send('f', true);
+    } else if (x > 50) {
+        stopped = false;
+        send('b', true);
+    } else if (y < -15) {
+        stopped = false;
+        send('l', true);
+    } else if (y > 15) {
+        stopped = false;
+        send('r', true);
+    } else {
+        if (!stopped) {
+            send('s', true);
+            stopped = true;
+        }
     }
 }
-);
+window.addEventListener('deviceorientation', handleOrientation);
