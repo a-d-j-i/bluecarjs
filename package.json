@@ -4,7 +4,7 @@
     "description": "bluetooth testing",
     "main": "index.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
+        "test": "echo \"no tests right now\" && exit 0",
         "start": "budo index.js:bundle.js --ssl --cors",
         "build": "browserify index.js > bundle.js"
     },
