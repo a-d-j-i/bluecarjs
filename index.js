@@ -4,7 +4,6 @@ require('bootstrap/dist/js/bootstrap');
 require('./node_modules/bootstrap/dist/css/bootstrap.css');
 
 
-
 let terminalContainer = document.getElementById('terminal');
 let sendForm = document.getElementById('send-form');
 let inputField = document.getElementById('input');
@@ -22,14 +21,12 @@ sendForm.addEventListener('submit', function (event) {
 
 function log(data, type = '') {
     terminalContainer.insertAdjacentHTML('beforeend',
-            '<div' + (type ? ' class="' + type + '"' : '') + '>' + data + '</div>');
+        '<div' + (type ? ' class="' + type + '"' : '') + '>' + data + '</div>');
 }
 
 
 // Characteristic object cache
 let characteristicCache = null;
-// Selected device object cache
-let deviceCache = null;
 
 async function handleDisconnection(event) {
     let device = event.target;
@@ -45,50 +42,77 @@ function handleCharacteristicValueChanged(event) {
     log(value, 'in');
 }
 
-
-
-async function connect() {
-    if (!deviceCache) {
-        try {
-            log('Requesting bluetooth device...');
-            //let device = await navigator.bluetooth.requestDevice({filters: [{services: [0xFFE0]}]});
-            let device = await navigator.bluetooth.requestDevice({
-                filters: [{services: [0xFFE0]}]
-            });
-            /*filters: [{namePrefix: 'HC-05'}]
-             let serviceUuid = '00001101-0000-1000-8000-00805f9b34fb';
-             log(serviceUuid);*/
-            //let device = await navigator.bluetooth.requestDevice({filters: [{services: [serviceUuid]}]});
-            log('> Name:             ' + device.name);
-            log('> Id:               ' + device.id);
-            log('> Connected:        ' + device.gatt.connected);
-            log('"' + device.name + '" bluetooth device selected');
-
-            deviceCache = device;
-            deviceCache.addEventListener('gattserverdisconnected', handleDisconnection);
-            log('Connecting to GATT server...');
-            let server = await device.gatt.connect();
-            log('> GATT server Connected:        ' + device.gatt.connected);
-            let primary = await server.getPrimaryService(0xFFE0);
-            console.log("PRIMARY", primary);
-            log('got primary ' + primary);
-            let characteristic = await primary.getCharacteristic(0xFFE1);
-            log('got characteristic');
-            characteristicCache = characteristic;
-            log('Starting notifications...');
-            await characteristic.startNotifications();
-            log('Notifications started');
-            connectStatus.innerHTML = "CONNECTED";
-            characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
-            characteristicCache = characteristic;
-            log("DONE");
-        } catch (err) {
-            console.error("ERROR", err);
-            log("ERROR" + err);
-            disconnect();
+function getSupportedProperties(characteristic) {
+    let supportedProperties = [];
+    for (const p in characteristic.properties) {
+        if (characteristic.properties[p] === true) {
+            supportedProperties.push(p);
         }
     }
+    return '[' + supportedProperties.join(', ') + ']';
 }
+
+function arrayBufferToBufferCycle(ab) {
+    var buffer = new Buffer(ab.byteLength);
+    var view = new Uint8Array(ab);
+    for (var i = 0; i < buffer.length; ++i) {
+        buffer[i] = view[i];
+    }
+    return buffer;
+}
+
+async function connect() {
+    try {
+        log('Requesting bluetooth device...');
+        const device = await navigator.bluetooth.requestDevice({
+            // filters: [...] <- Prefer filters to save energy & show relevant devices.
+            acceptAllDevices: true,
+            optionalServices: [
+                "6e400001-b5a3-f393-e0a9-e50e24dcca9e".toLowerCase(),
+                "00001800-0000-1000-8000-00805f9b34fb".toLowerCase(),
+                "00001801-0000-1000-8000-00805f9b34fb".toLowerCase(),
+            ]
+        })
+        log('> Name:             ' + device.name);
+        log('> Id:               ' + device.id);
+        log('> Connected:        ' + device.gatt.connected);
+        log('"' + device.name + '" bluetooth device selected');
+        device.addEventListener('gattserverdisconnected', handleDisconnection);
+
+        log('Connecting to GATT server...');
+        let server = await device.gatt.connect();
+        log('> GATT server Connected:        ' + device.gatt.connected);
+        const services = await server.getPrimaryServices();
+        for (let service of services) {
+            log('> Service: ' + service.uuid);
+            const characteristics = await service.getCharacteristics();
+            log('cs', characteristics);
+            for (const characteristic of characteristics) {
+                const props = characteristic.properties;
+                log('      Characteristic: ' + characteristic.uuid + " " + getSupportedProperties(characteristic));
+                /*if (props ['write']) {
+                    log('Write ' + await characteristic.writeValue(Buffer.from('XXXX')));
+                }
+                if (props ['read']) {
+                    log('Read ' + (arrayBufferToBufferCycle(await characteristic.readValue()).toString('hex')));
+                }
+                if (props ['notify'] || props ['indicate']) {
+                    log('Starting notifications...');
+                    log(await characteristic.startNotifications());
+                    characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
+                    characteristicCache = characteristic;
+                }*/
+            }
+        }
+        log("DONE");
+    } catch (err) {
+        log("ERROR " + err);
+        console.error("ERROR ", err, err.stackTrace);
+        disconnect();
+    } finally {
+    }
+}
+
 async function send(data, skiplog) {
     data = String(data);
     if (!data || !characteristicCache) {
@@ -105,7 +129,7 @@ async function disconnect() {
         characteristicCache.removeEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
         characteristicCache = null;
     }
-    if (deviceCache) {
+    /*if (deviceCache) {
         log('Disconnecting from "' + deviceCache.name + '" bluetooth device...');
         deviceCache.removeEventListener('gattserverdisconnected', handleDisconnection);
         if (deviceCache.gatt.connected) {
@@ -115,16 +139,16 @@ async function disconnect() {
             log('"' + deviceCache.name + '" bluetooth device is already disconnected');
         }
         deviceCache = null;
-    }
+    }*/
 }
 
 
 let actions = {
-    "forward": 'f',
-    "left": 'l',
-    "stop": 's',
-    "right": 'r',
-    "back": 'b'
+    "forward": 's255,255',
+    "left": 's-255,255',
+    "stop": 'st',
+    "right": 's255,-255',
+    "back": 's-255,-255'
 };
 Object.keys(actions).forEach(key => {
     document.getElementById(key).addEventListener('click', () => {
@@ -133,8 +157,8 @@ Object.keys(actions).forEach(key => {
 });
 
 
-
 let stopped = true;
+
 function handleOrientation(event) {
     var x = event.beta;  // In degree in the range [-180,180]
     var y = event.gamma; // In degree in the range [-90,90]
@@ -142,21 +166,22 @@ function handleOrientation(event) {
     acelerometer.innerHTML = "x : " + x + "  y: " + y;
     if (x < -15) {
         stopped = false;
-        send('f', true);
+        send(actions["forward"], true);
     } else if (x > 50) {
         stopped = false;
-        send('b', true);
+        send(actions["back"], true);
     } else if (y < -15) {
         stopped = false;
-        send('l', true);
+        send(actions["left"], true);
     } else if (y > 15) {
         stopped = false;
-        send('r', true);
+        send(actions["right"], true);
     } else {
         if (!stopped) {
-            send('s', true);
+            send(actions["stop"], true);
             stopped = true;
         }
     }
 }
+
 window.addEventListener('deviceorientation', handleOrientation);
