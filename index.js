@@ -1,27 +1,58 @@
-window.jQuery = $ = require("jquery");
-require('popper.js/dist/umd/popper');
-require('bootstrap/dist/js/bootstrap');
-require('./node_modules/bootstrap/dist/css/bootstrap.css');
+//window.jQuery = $ = require("jquery");
+require('./node_modules/bulma/css/bulma.css');
+const nipplejs = require('nipplejs');
 
-
+const manager = nipplejs.create(
+    {
+        zone: document.getElementById('zone_joystick'),
+        mode: 'static',
+        size: 200,
+        position: {
+            left: '50%',
+            top: '50%'
+        },
+        color: 'blue'
+    }
+).on('start', function (event, nipple) {
+    console.log("Movement start");
+}).on('move', function (event, nipple) {
+    console.log("Moving");
+}).on('end', function () {
+    console.log("Movement end");
+});
+window.addEventListener("keydown", function (e) {
+    // space and arrow keys
+    console.log("You pressed", e);
+    if ([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
+        e.preventDefault();
+    }
+}, false);
 let terminalContainer = document.getElementById('terminal');
-let sendForm = document.getElementById('send-form');
 let inputField = document.getElementById('input');
 let connectStatus = document.getElementById('connect_status');
 let acelerometer = document.getElementById('acelerometer');
 // Connect to the device on Connect button click
 document.getElementById('connect').addEventListener('click', connect);
 document.getElementById('disconnect').addEventListener('click', disconnect);
+
+/*let sendForm = document.getElementById('send-form');
 sendForm.addEventListener('submit', function (event) {
     event.preventDefault(); // Prevent form sending
     send(inputField.value); // Send text field contents
     inputField.value = ''; // Zero text field
     inputField.focus(); // Focus on text field
-});
+});*/
+
+
+let logBuf = [];
 
 function log(data, type = '') {
-    terminalContainer.insertAdjacentHTML('beforeend',
-        '<div' + (type ? ' class="' + type + '"' : '') + '>' + data + '</div>');
+    logBuf.push(data);
+    if (logBuf.length > 20) {
+        logBuf.shift();
+    }
+    console.log(logBuf.length, logBuf);
+    terminalContainer.innerHTML = '<div' + (type ? ' class="' + type + '"' : '') + '>' + logBuf.join("<br>") + '</div>';
 }
 
 
@@ -39,7 +70,7 @@ async function handleDisconnection(event) {
 function handleCharacteristicValueChanged(event) {
     // Limiter to 21 chars (DataView)
     let value = new TextDecoder().decode(event.target.value);
-    log(value, 'in');
+    console.log(event.target.uuid + ":" + value, 'in');
 }
 
 function getSupportedProperties(characteristic) {
@@ -63,6 +94,7 @@ function arrayBufferToBufferCycle(ab) {
 
 async function connect() {
     try {
+        logBuf = [];
         log('Requesting bluetooth device...');
         const device = await navigator.bluetooth.requestDevice({
             // filters: [...] <- Prefer filters to save energy & show relevant devices.
@@ -90,7 +122,7 @@ async function connect() {
             for (const characteristic of characteristics) {
                 const props = characteristic.properties;
                 log('      Characteristic: ' + characteristic.uuid + " " + getSupportedProperties(characteristic));
-                /*if (props ['write']) {
+                if (props ['write']) {
                     log('Write ' + await characteristic.writeValue(Buffer.from('XXXX')));
                 }
                 if (props ['read']) {
@@ -101,7 +133,7 @@ async function connect() {
                     log(await characteristic.startNotifications());
                     characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
                     characteristicCache = characteristic;
-                }*/
+                }
             }
         }
         log("DONE");

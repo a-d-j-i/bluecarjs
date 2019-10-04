@@ -12,17 +12,15 @@
     "license": "ISC",
     "devDependencies": {
         "browserify": "^16.2.3",
-        "budo": "^11.6.2"
+        "budo": "^11.6.2",
+        "nipplejs": "^0.8.3",
+        "bulma": "^0.7.5",
+        "cssify": "^1.0.3"
     },
     "browserify": {
         "transform": [
             "cssify"
         ]
     },
-    "dependencies": {
-        "bootstrap": "^4.3.1",
-        "cssify": "^1.0.3",
-        "jquery": "^3.4.0",
-        "popper.js": "^1.15.0"
-    }
+    "dependencies": {}
 }
